@@ -1,4 +1,4 @@
-# Tier lists des villageois
+# Classement des villageois
 
 Page statique (`site/`) hébergée sur GitHub Pages, avec une base Supabase (`supabase/schema.sql`).
 Chaque ami crée son profil, tout le monde voit tous les profils, et un mot de passe protège la modification.
