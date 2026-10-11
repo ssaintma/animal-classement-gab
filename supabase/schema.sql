@@ -46,7 +46,7 @@ begin
   if p_password is null or char_length(p_password) < 4 or char_length(p_password) > 72 then
     raise exception 'bad_password_format';
   end if;
-  if (select count(*) from public.profiles) >= 200 then
+  if (select count(*) from public.profiles) >= 20 then
     raise exception 'too_many_profiles';
   end if;
   insert into public.profiles (name, pw_hash)

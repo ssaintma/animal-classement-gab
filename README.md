@@ -20,7 +20,7 @@ Les visiteurs n'ont aucun accès direct à la table. Ils passent par cinq foncti
 
 ## Bon à savoir
 
-- Limites prévues: 200 profils au plus, nom de 30 caractères au plus.
+- Limites prévues: 20 profils au plus, nom de 30 caractères au plus.
 - Mot de passe perdu: il ne peut pas être récupéré. Supprime le profil depuis Supabase (**Table Editor > profiles**) et recrée-le.
 - Les images des villageois appartiennent à Nintendo. C'est un projet de fans.
 - Ne mets jamais la clé `service_role` de Supabase dans la page.
