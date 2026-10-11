@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tier lists des villageois</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap">
+<style>
+/* Layout: profile bar on top, tiers full width in reading mode; in edit mode a sticky pool of unranked heads sits beside the tiers. */
+:root{
+  color-scheme:light;
+  --bg:#e9f1dc; --surface:#fbfaf1; --panel:#d5e8f3; --ink:#1f3d2b; --muted:#4a6654; --line:#1f3d2b;
+  --accent:#e8742a; --accent-soft:#ffe3c9; --tile:#ffffff; --btn:#f2a65a; --on-btn:#1f3d2b;
+  --focus:#2f6fb3; --danger-bg:#b3342c; --on-danger:#ffffff; --err:#a3281f;
+  --t0:#8fd19e; --t1:#c6e48b; --t2:#f6e08a; --t3:#f5b27a; --t4:#e88b8b; --on-tier:#1f3d2b;
+  --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-weight:600;font-size:16px;padding-inline:16px}
+button,input,select{font-family:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-size:clamp(26px,4vw,38px);font-weight:900;letter-spacing:-.5px;text-wrap:balance}
+.sub{margin:4px 0 0;color:var(--muted);font-size:16px;min-height:1.4em}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px;border:2px solid var(--line);border-radius:16px;background:var(--surface)}
+.bar label{font-weight:900}
+.btn{min-height:44px;padding:0 18px;border-radius:999px;border:2px solid var(--line);background:var(--btn);color:var(--on-btn);font-size:16px;font-weight:900}
+.btn.alt{background:var(--tile);color:var(--ink)}
+.btn.danger{background:var(--danger-bg);color:var(--on-danger)}
+.btn[disabled]{opacity:.55;cursor:default}
+.field{min-height:44px;padding:0 12px;border-radius:12px;border:2px solid var(--line);background:var(--tile);font-size:16px;font-weight:700;min-width:0}
+.grow{flex:1;min-width:180px}
+.state{margin-inline-start:auto;font-weight:800;color:var(--muted)}
+.state b{color:var(--ink)}
+.panel{padding:16px;border:2px solid var(--line);border-radius:16px;background:var(--surface)}
+.panel form{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.panel h2{margin:0 0 10px;font-size:20px;font-weight:900}
+.fld{display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px}
+.fld span{font-size:14px;font-weight:800;color:var(--muted)}
+.err{margin:8px 0 0;color:var(--err);font-weight:800;min-height:1.2em}
+.note{margin:8px 0 0;color:var(--muted);font-size:14px}
+.empty{padding:32px 20px;border:2px dashed var(--line);border-radius:16px;text-align:center;background:var(--surface)}
+.empty h2{margin:0 0 6px;font-size:22px;font-weight:900}
+.empty p{margin:0 auto 14px;max-width:46ch;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.pool{border:2px solid var(--line);border-radius:16px;background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pool-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pool-head h2{margin:0;font-size:20px;font-weight:900}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.count{font-size:14px;font-weight:800;color:var(--muted)}
+.pool-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;overflow-y:auto;max-height:46vh;align-content:start}
+.tiers{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tier{display:flex;min-height:84px;border:2px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.tl{width:clamp(76px,20vw,112px);flex:none;border:0;border-inline-end:2px solid var(--line);color:var(--on-tier);font-size:clamp(15px,2.4vw,20px);font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px}
+.tl small{font-size:13px;font-weight:800}
+.tl[aria-disabled="true"]{cursor:default}
+.tc{flex:1;min-width:0;padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-content:center}
+.chip{min-width:0;border:3px solid var(--line);border-radius:12px;background:var(--tile);display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px 3px}
+div.chip{border-color:transparent}
+.chip.sel{border-color:var(--accent);background:var(--accent-soft)}
+.chip .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:900}
+.tc .chip{width:72px}
+.pool-list .chip{padding:6px 2px 4px}
+.pool-list .chip .nm{font-size:13px}
+.hd{display:block;flex:none;border-radius:50%;background-image:url(sheet.webp);background-repeat:no-repeat}
+.h56{width:56px;height:56px;background-size:1176px 1120px}
+.h48{width:48px;height:48px;background-size:1008px 960px}
+.foot{color:var(--muted);font-size:13px}
+@media (min-width:900px){
+  .layout.editing{grid-template-columns:minmax(300px,420px) minmax(0,1fr)}
+  .layout.editing .pool{position:sticky;top:16px;max-height:calc(100vh - 32px)}
+  .layout.editing .pool-list{max-height:none;flex:1;min-height:0}
+}
+@media (prefers-reduced-motion:no-preference){.chip,.btn{transition:background-color .12s,border-color .12s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tier lists des villageois</h1>
+    <p class="sub" id="hint" aria-live="polite"></p>
+  </header>
+
+  <section class="bar" aria-label="Profils">
+    <label for="profileSelect">Profil</label>
+    <select id="profileSelect" class="field grow"></select>
+    <button type="button" class="btn alt" id="btnNew">Nouveau profil</button>
+    <button type="button" class="btn" id="btnEdit" hidden>Modifier</button>
+    <button type="button" class="btn" id="btnDone" hidden>Terminer</button>
+    <button type="button" class="btn danger" id="btnDelete" hidden>Supprimer</button>
+    <span class="state" id="stateText" aria-live="polite"></span>
+  </section>
+
+  <section class="panel" id="panelCreate" hidden>
+    <h2>Nouveau profil</h2>
+    <form id="formCreate" autocomplete="off">
+      <label class="fld"><span>Nom du profil</span><input class="field" id="cName" maxlength="30" required></label>
+      <label class="fld"><span>Mot de passe (4 caractères minimum)</span><input class="field" id="cPw" type="password" minlength="4" autocomplete="new-password" required></label>
+      <label class="fld"><span>Répéter le mot de passe</span><input class="field" id="cPw2" type="password" minlength="4" autocomplete="new-password" required></label>
+      <button type="submit" class="btn" id="cSubmit">Créer le profil</button>
+      <button type="button" class="btn alt" data-close>Annuler</button>
+    </form>
+    <p class="err" id="cErr" role="alert"></p>
+    <p class="note">Tout le monde peut voir ce profil. Il faut le mot de passe pour le modifier ou le supprimer. Il ne peut pas être récupéré s'il est perdu.</p>
+  </section>
+
+  <section class="panel" id="panelUnlock" hidden>
+    <h2 id="uTitle">Modifier ce classement</h2>
+    <form id="formUnlock">
+      <label class="fld"><span>Mot de passe du profil</span><input class="field" id="uPw" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="btn">Déverrouiller</button>
+      <button type="button" class="btn alt" data-close>Annuler</button>
+    </form>
+    <p class="err" id="uErr" role="alert"></p>
+  </section>
+
+  <section class="panel" id="panelDelete" hidden>
+    <h2 id="dTitle">Supprimer ce profil</h2>
+    <form id="formDelete">
+      <label class="fld"><span>Mot de passe du profil, pour confirmer</span><input class="field" id="dPw" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="btn danger">Supprimer définitivement</button>
+      <button type="button" class="btn alt" data-close>Annuler</button>
+    </form>
+    <p class="err" id="dErr" role="alert"></p>
+  </section>
+
+  <section class="empty" id="emptyState" hidden>
+    <h2 id="emptyTitle">Aucun profil pour l'instant</h2>
+    <p id="emptyText">Crée un profil pour classer les 413 villageois en cinq rangs, de Parfait à Poubelle.</p>
+    <button type="button" class="btn" id="btnNew2">Créer un profil</button>
+  </section>
+
+  <div class="layout" id="layout" hidden>
+    <aside class="pool" id="pool" hidden aria-label="Villageois à classer">
+      <div class="pool-head">
+        <h2>À classer</h2>
+        <button type="button" class="btn alt" id="btnBack" aria-disabled="true">Remettre ici</button>
+      </div>
+      <div class="filters">
+        <input class="field grow" id="q" type="search" placeholder="Chercher un nom" aria-label="Chercher un villageois">
+        <select class="field" id="sp" aria-label="Filtrer par espèce"></select>
+      </div>
+      <div class="count" id="poolCount"></div>
+      <div class="pool-list" id="poolList"></div>
+    </aside>
+    <section class="tiers" id="tiers" aria-label="Classement"></section>
+  </div>
+
+  <p class="foot">Projet de fans, sans lien avec Nintendo. Les images des villageois appartiennent à Nintendo.</p>
+</div>
+
+<script>
+(function () {
+  var SUPABASE_URL = 'https://vsigyozovdrgbmjmjqeo.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_8ySxPXkIb2uzwVedi6JdtQ_h5CpwsJz';
+  var DATA = 'Aaron|Pig;Abraham|Deer;Agnès|Bear cub;Aimé|Lion;Alice|Koala;Alix|Rabbit;Allie|Alligator;Alphonse|Alligator;Amande|Squirrel;Anabelle|Anteater;Angus|Bull;Anna|Dog;Anne|Horse;Annie|Mouse;Antonio|Anteater;Apollon|Eagle;Arnold|Bull;Astair|Eagle;Aurore|Penguin;Aurélie|Eagle;Avril|Dog;Axel|Elephant;Azalée|Rhinoceros;Babouin|Gorilla;Bajoue|Frog;Barry|Elephant;Bebel|Hippo;Belle|Mouse;Ben|Rhinoceros;Bengale|Tiger;Bernardo|Dog;Bertha|Hippo;Beubeu|Bull;Bibi|Deer;Bichoune|Deer;Biff|Hippo;Bigoudi|Sheep;Bill|Bear cub;Biquette|Goat;Blair|Anteater;Blanche|Wolf;Bob|Hippo;Bonno|Pig;Boris|Pig;Boubou|Deer;Bouloche|Sheep;Boumboum|Bird;Bourrico|Horse;Brutus|Dog;Béa|Dog;Bébert|Duck;Bérénice|Sheep;Bêêtty|Sheep;Cachou|Squirrel;Calypso|Koala;Camille|Pig;Candy|Bear;Capri|Goat;Carlos|Frog;Caro|Duck;Cashmir|Sheep;Charles|Hamster;Charlène|Sheep;Chavrina|Goat;Chaï|Elephant;Chef|Wolf;Chelsea|Deer;Chico|Hamster;Choco|Duck;Chuck|Alligator;Chulin|Bear;Civet|Rabbit;Clara|Rabbit;Clarabêl|Sheep;Claude|Rabbit;Cléa|Horse;Cléo|Anteater;Coco|Rabbit;Colvert|Duck;Condor|Bird;Cookie|Dog;Cornio|Rhinoceros;Crabot|Frog;Crakos|Frog;Crocket|Dog;Croko|Alligator;Cube|Penguin;Curt|Bear;Cyrano|Anteater;Câlin|Cat;Cédric|Cat;Célia|Squirrel;César|Gorilla;Dalma|Dog;Damia|Squirrel;Daniel|Horse;Darius|Bird;Didi|Deer;Dimitri|Chicken;Doc|Rabbit;Dolph|Tiger;Dora|Mouse;Dorian|Horse;Dorothée|Rabbit;Drago|Alligator;Déborah|Duck;Eddie|Bear cub;Ella|Elephant;Elvis|Lion;Emma|Hamster;Enzo|Eagle;Esther|Hamster;Estrella|Ostrich;Ethan|Penguin;Eustache|Bear;Eva|Chicken;Fabien|Frog;Fanny|Elephant;Faust|Eagle;Faustine|Ostrich;Figaro|Frog;Filibert|Squirrel;Flèche|Bull;Foufou|Dog;Friga|Penguin;Gabin|Ostrich;Gaby|Rabbit;Gambette|Frog;Garance|Eagle;Gary|Wolf;Gaston|Rabbit;Gaëlle|Gorilla;George|Dog;Gertrude|Gorilla;Gilbert|Bird;Gladys|Ostrich;Gloria|Frog;Gogo|Gorilla;Gonzo|Koala;Gordon|Frog;Gradub|Bear cub;Graham|Hamster;Greggae|Eagle;Greta|Mouse;Grignote|Rabbit;Grisa|Bear cub;Grisette|Rabbit;Grizzly|Bear;Grognon|Goat;Gruyère|Mouse;Guido|Hamster;Gustave|Gorilla;Gwen|Penguin;Gérard|Bird;Hector|Alligator;Henri|Frog;Herbert|Chicken;Hercule|Lion;Hervé|Penguin;Hippy|Hippo;Hélaine|Sheep;Irène|Squirrel;Isaac|Bear;Isabelle|Squirrel;Ismaël|Dog;Jacky|Bird;Jacob|Bird;Jamy|Koala;Jean-Bon|Pig;Jeannot|Rabbit;Jeff|Tiger;Jennifer|Horse;Jo|Chicken;Joachim|Mouse;Jojo|Hamster;Jon|Deer;Joseph|Duck;Julie|Ostrich;Justin|Pig;Justine|Ostrich;Jérémie|Frog;Kabuki|Cat;Kali|Rabbit;Kalyptus|Koala;Kanga|Kangaroo;Karen|Sheep;Kat|Cat;Ken|Chicken;Ketchup|Duck;Kiki|Cat;Kitty|Cat;Klaus|Bear;Koaline|Koala;Koko|Koala;Kolala|Koala;Kolette|Koala;Kristine|Rabbit;Laflèche|Ostrich;Laura|Bear cub;Laurie|Penguin;Leandro|Lion;Lico|Horse;Lili|Monkey;Linette|Cat;Lobo|Wolf;Lola|Squirrel;Loran|Gorilla;Louis|Gorilla;Loupiot|Wolf;Lourant|Monkey;Lucie|Pig;Luna|Monkey;Luppa|Wolf;Lydie|Pig;Léa|Bear cub;Léo|Lion;Léonard|Lion;Léopold|Lion;Madsi|Kangaroo;Magogo|Monkey;Maguy|Elephant;Maiko|Cow;Mallory|Duck;Manfred|Eagle;Manu|Bear cub;Marcel|Mouse;Margaux|Cow;Marilou|Wolf;Marina|Octopus;Marine|Cat;Marito|Tiger;Marjorie|Pig;Marlou|Hamster;Martin|Horse;Marty|Bear cub;Marvin|Octopus;Maréchal|Bird;Mathilda|Anteater;Mathilde|Kangaroo;Mathéo|Squirrel;Maud|Cat;Maëlle|Duck;Maëllis|Duck;Maï|Sheep;Mehdi|Dog;Melba|Koala;Michèle|Bird;Miglou|Penguin;Miguel|Bird;Mike|Kangaroo;Miles|Elephant;Milos|Frog;Mina|Duck;Mireille|Monkey;Miro|Bear cub;Mirza|Dog;Missy|Mouse;Mistigri|Cat;Moktar|Goat;Molly|Duck;Momo|Cat;Monica|Wolf;Monique|Cat;Mounia|Squirrel;Mozzar|Mouse;Myrtille|Bear cub;Nacer|Deer;Nadeige|Squirrel;Nadia|Rabbit;Nadine|Rabbit;Nana|Goat;Naomie|Dog;Napoléon|Eagle;Narcisse|Duck;Nathan|Bear;Neferti|Cat;Neige|Bird;Ninjette|Squirrel;Nonos|Dog;Nora|Penguin;Norma|Cow;Noémie|Tiger;Octave|Octopus;Octoborg|Octopus;Odile|Alligator;Olivia|Cat;Olympe|Dog;Opaline|Elephant;Ottie|Ostrich;Oursula|Bear;Pachy|Elephant;Pamela|Squirrel;Pansy|Pig;Paolo|Elephant;Patty|Rhinoceros;Pauline|Bear cub;Paulito|Hippo;Pec|Bird;Perle|Cat;Phil|Ostrich;Phébus|Eagle;Pierrot|Wolf;Pietro|Sheep;Placide|Bear cub;Pompon|Duck;Poquette|Kangaroo;Porken|Pig;Potama|Hippo;Poulette|Chicken;Pouli|Chicken;Primo|Gorilla;Prince|Frog;Prof|Duck;Prune|Horse;Punk|Elephant;Pécan|Squirrel;Quenotte|Mouse;Rachida|Squirrel;Raina|Frog;Ralf|Tiger;Ramsès|Dog;Raymond|Cat;Reine|Ostrich;Renée|Rhinoceros;Reynald|Penguin;Rhino|Rhinoceros;Rhona|Kangaroo;Rilla|Gorilla;Rina|Rhinoceros;Robert|Cat;Roberta|Anteater;Robie|Bird;Rocky|Squirrel;Ronchon|Bear;Rosalie|Bear cub;Rosanne|Deer;Rosco|Horse;Rose|Pig;Rosie|Cat;Rosine|Bear;Roswell|Alligator;Rougepif|Cat;Roy|Squirrel;Rubis|Rabbit;Rudy|Monkey;Régis|Deer;Rénata|Frog;Rénato|Frog;Sabrina|Mouse;Salami|Pig;Samson|Mouse;Savana|Horse;Scooter|Duck;Seguin|Goat;Selma|Kangaroo;Shimi|Mouse;Shino|Deer;Simon|Monkey;Sonya|Chicken;Sophie|Ostrich;Sourizzi|Mouse;Steakos|Bull;Stefaon|Deer;Stella|Hamster;Steven|Mouse;Sucrette|Mouse;Suzy|Cat;Sylvette|Rabbit;Sélène|Sheep;Tarina|Anteater;Teddy|Bear;Terra|Squirrel;Terrine|Duck;Théo|Bear cub;Tiansheng|Monkey;Tigri|Cat;Tiphaine|Rabbit;Tirbou|Pig;Titi|Bird;Toby|Rabbit;Tom|Cat;Tonton|Sheep;Tony|Horse;Toto|Bull;Trufa|Pig;Tupux|Cat;Tutu|Bear;Urbain|Penguin;Valé|Cow;Vanessa|Bear cub;Vanina|Tiger;Verbert|Frog;Victor|Penguin;Victoria|Horse;Violette|Frog;Viviane|Wolf;Vladimir|Bear cub;Véra|Goat;Walt|Kangaroo;Wendy|Bear;Wolfgang|Wolf;Wolfram|Chicken;Zabou|Bear;Zinzin|Penguin;Zoé|Rabbit;Âne-lise|Horse;Édouard|Horse;Électro|Squirrel;Élise|Monkey;Éloïse|Elephant;Émilien|Penguin;Épicure|Rabbit;Étoile|Sheep';
+  var SPECIES_FR = { Monkey:'Singe', Bear:'Ours', Sheep:'Mouton', Mouse:'Souris', 'Bear cub':'Ourson', Cat:'Chat', Pig:'Cochon', Eagle:'Aigle', Koala:'Koala', Penguin:'Manchot', Deer:'Cerf', Hamster:'Hamster', Goat:'Chèvre', Dog:'Chien', Wolf:'Loup', Ostrich:'Autruche', Alligator:'Alligator', Rhinoceros:'Rhinocéros', Gorilla:'Gorille', Squirrel:'Écureuil', Tiger:'Tigre', Cow:'Vache', Duck:'Canard', Octopus:'Pieuvre', Bull:'Taureau', Frog:'Grenouille', Chicken:'Poulet', Lion:'Lion', Anteater:'Fourmilier', Kangaroo:'Kangourou', Rabbit:'Lapin', Elephant:'Éléphant', Hippo:'Hippopotame', Bird:'Oiseau', Horse:'Cheval' };
+  var TIERS = ['Parfait', 'Bien', 'Ça va', 'Bof', 'Poubelle'];
+  var COLS = 21;
+  function norm(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  var V = DATA.split(';').map(function (s, i) {
+    var p = s.split('|');
+    return { id: i, name: p[0], sp: p[1], col: i % COLS, row: Math.floor(i / COLS), key: norm(p[0]) };
+  });
+  var ORDER = V.slice().sort(function (a, b) { return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
+
+  var $ = function (id) { return document.getElementById(id); };
+  var st = { profiles: [], cur: null, curDoc: null, rank: {}, pw: '', editing: false, sel: null, q: '', sp: '', save: '', loaded: false, failed: false };
+  var dirty = false, timer = null;
+
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  /* ---------- Supabase: every call goes through a function that checks the password in the database ---------- */
+  function rpc(fn, args) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(args || {})
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (e) {}
+        if (!r.ok) { var err = new Error((j && j.message) || ('http_' + r.status)); err.code = r.status; throw err; }
+        return j;
+      });
+    });
+  }
+  function errText(e) {
+    var m = e && e.message || '';
+    if (m === 'bad_password') return 'Mot de passe incorrect.';
+    if (m === 'too_many_profiles') return 'Il y a déjà trop de profils. Supprime-en un avant d\'en créer un autre.';
+    if (m === 'bad_name') return 'Le nom doit avoir entre 1 et 30 caractères.';
+    if (m === 'bad_password_format') return 'Le mot de passe doit avoir entre 4 et 72 caractères.';
+    return 'La connexion a échoué. Réessaie dans un instant.';
+  }
+
+  /* ---------- rendering ---------- */
+  function showPanel(name) {
+    ['Create', 'Unlock', 'Delete'].forEach(function (n) { $('panel' + n).hidden = n !== name; });
+    ['cErr', 'uErr', 'dErr'].forEach(function (i) { $(i).textContent = ''; });
+    if (name) {
+      var f = { Create: 'cName', Unlock: 'uPw', Delete: 'dPw' }[name];
+      $(f).value = '';
+      if (name === 'Create') { $('cPw').value = ''; $('cPw2').value = ''; }
+      $(f).focus();
+    }
+  }
+  function curName() { return st.curDoc && st.curDoc.name ? st.curDoc.name : ''; }
+
+  function renderBar() {
+    var s = $('profileSelect');
+    s.textContent = '';
+    var o0 = document.createElement('option');
+    o0.value = ''; o0.textContent = st.profiles.length ? 'Choisir un profil' : 'Aucun profil';
+    s.appendChild(o0);
+    st.profiles.forEach(function (p) {
+      var o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name || p.id;
+      s.appendChild(o);
+    });
+    s.value = st.cur || '';
+    $('btnEdit').hidden = !(st.cur && !st.editing);
+    $('btnDone').hidden = !st.editing;
+    $('btnDelete').hidden = !st.editing;
+    var t = $('stateText');
+    t.textContent = '';
+    if (st.cur && st.editing) {
+      var b = document.createElement('b');
+      b.textContent = { saving: 'Enregistrement…', saved: 'Enregistré', error: 'Échec de l\'enregistrement' }[st.save] || 'Modification en cours';
+      t.appendChild(b);
+    } else if (st.cur) {
+      t.textContent = 'Lecture seule';
+    }
+  }
+
+  function setHint() {
+    var h;
+    if (st.failed) h = 'Impossible de joindre la base de données. Recharge la page dans un instant.';
+    else if (!st.loaded) h = 'Chargement des profils…';
+    else if (!st.cur) h = st.profiles.length ? 'Choisis un profil pour voir son classement.' : '';
+    else if (st.editing) h = st.sel === null ? 'Choisis un villageois, puis clique sur le nom d\'un rang.' : 'Clique sur un rang pour y mettre ' + V[st.sel].name + '.';
+    else h = 'Classement de ' + curName() + '. Clique sur Modifier pour le changer.';
+    $('hint').textContent = h;
+  }
+
+  function mkChip(v, size, interactive) {
+    var b = document.createElement(interactive ? 'button' : 'div');
+    b.className = 'chip' + (st.sel === v.id ? ' sel' : '');
+    b.dataset.id = v.id;
+    if (interactive) {
+      b.type = 'button';
+      b.setAttribute('aria-pressed', st.sel === v.id ? 'true' : 'false');
+      b.onclick = function () { setSel(st.sel === v.id ? null : v.id); };
+    }
+    var h = document.createElement('span');
+    h.className = 'hd h' + size;
+    h.style.backgroundPosition = '-' + (v.col * size) + 'px -' + (v.row * size) + 'px';
+    var n = document.createElement('span');
+    n.className = 'nm'; n.textContent = v.name;
+    b.appendChild(h); b.appendChild(n);
+    return b;
+  }
+
+  function setSel(id) {
+    st.sel = id;
+    document.querySelectorAll('.chip[data-id]').forEach(function (c) {
+      var on = +c.dataset.id === st.sel;
+      c.classList.toggle('sel', on);
+      if (c.tagName === 'BUTTON') c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    $('btnBack').setAttribute('aria-disabled', st.sel === null ? 'true' : 'false');
+    document.querySelectorAll('.tl').forEach(function (b, i) {
+      b.setAttribute('aria-disabled', st.editing && st.sel !== null ? 'false' : 'true');
+      b.setAttribute('aria-label', st.editing && st.sel !== null ? 'Placer ' + V[st.sel].name + ' dans ' + TIERS[i] : TIERS[i]);
+    });
+    setHint();
+  }
+
+  function renderTiers() {
+    var box = $('tiers');
+    box.textContent = '';
+    TIERS.forEach(function (name, i) {
+      var row = document.createElement('div'); row.className = 'tier';
+      var lab = document.createElement('button');
+      lab.type = 'button'; lab.className = 'tl'; lab.style.background = 'var(--t' + i + ')';
+      lab.setAttribute('aria-disabled', 'true');
+      var items = ORDER.filter(function (v) { return st.rank[v.id] === i; });
+      lab.appendChild(document.createTextNode(name));
+      var sm = document.createElement('small'); sm.textContent = items.length; lab.appendChild(sm);
+      lab.onclick = function () { if (st.editing && st.sel !== null) move(i); };
+      var cont = document.createElement('div'); cont.className = 'tc';
+      items.forEach(function (v) { cont.appendChild(mkChip(v, 48, st.editing)); });
+      row.appendChild(lab); row.appendChild(cont); box.appendChild(row);
+    });
+  }
+
+  function renderPool() {
+    var list = $('poolList');
+    list.textContent = '';
+    var q = norm(st.q.trim());
+    var items = ORDER.filter(function (v) {
+      return st.rank[v.id] === undefined && (!st.sp || v.sp === st.sp) && (!q || v.key.indexOf(q) !== -1);
+    });
+    var frag = document.createDocumentFragment();
+    items.forEach(function (v) { frag.appendChild(mkChip(v, 56, true)); });
+    list.appendChild(frag);
+    var left = V.length - Object.keys(st.rank).length;
+    $('poolCount').textContent = items.length + ' affichés, ' + left + ' restent à classer';
+  }
+
+  function render() {
+    renderBar();
+    var hasProfile = !!st.cur && !!st.curDoc;
+    var noneYet = st.loaded && !st.profiles.length;
+    $('emptyState').hidden = !(st.loaded && !st.failed && !hasProfile);
+    $('emptyTitle').textContent = noneYet ? 'Aucun profil pour l\'instant' : 'Quel classement veux-tu voir ?';
+    $('emptyText').textContent = noneYet
+      ? 'Crée un profil pour classer les 413 villageois en cinq rangs, de Parfait à Poubelle.'
+      : 'Choisis un profil dans la liste, ou crée le tien.';
+    $('layout').hidden = !hasProfile;
+    $('layout').classList.toggle('editing', st.editing);
+    $('pool').hidden = !st.editing;
+    if (hasProfile) {
+      renderTiers();
+      if (st.editing) renderPool();
+    }
+    setSel(st.sel);
+  }
+
+  /* ---------- editing & saving ---------- */
+  function move(to) {
+    if (st.sel === null) return;
+    var r = Object.assign({}, st.rank);
+    if (to === null) delete r[st.sel]; else r[st.sel] = to;
+    st.rank = r; st.sel = null;
+    queueSave();
+    render();
+  }
+  function queueSave() {
+    dirty = true; st.save = 'saving'; renderBar();
+    clearTimeout(timer); timer = setTimeout(flush, 600);
+  }
+  function flush() {
+    clearTimeout(timer);
+    if (!dirty || !st.cur) return Promise.resolve();
+    dirty = false;
+    return rpc('save_rank', { p_id: st.cur, p_password: st.pw, p_rank: st.rank }).then(function () {
+      st.save = dirty ? 'saving' : 'saved'; renderBar();
+    }, function () { dirty = true; st.save = 'error'; renderBar(); });
+  }
+
+  function find(id) { return st.profiles.filter(function (x) { return x.id === id; })[0]; }
+
+  function selectProfile(id) {
+    flush().then(function () {
+      st.cur = id || null; st.editing = false; st.sel = null; st.save = ''; st.pw = '';
+      var p = id ? find(id) : null;
+      st.curDoc = p || null; st.rank = p ? (p.rank || {}) : {};
+      if (!p) st.cur = null;
+      if (id) lsSet('tl-profile', id);
+      showPanel(null); render();
+    });
+  }
+
+  /* ---------- wiring ---------- */
+  $('profileSelect').onchange = function () { selectProfile(this.value); };
+  $('btnNew').onclick = $('btnNew2').onclick = function () { showPanel('Create'); };
+  $('btnEdit').onclick = function () { $('uTitle').textContent = 'Modifier le classement de ' + curName(); showPanel('Unlock'); };
+  $('btnDone').onclick = function () {
+    flush().then(function () {
+      st.editing = false; st.sel = null; st.save = ''; st.pw = '';
+      refresh();
+    });
+  };
+  $('btnDelete').onclick = function () { $('dTitle').textContent = 'Supprimer le profil ' + curName(); showPanel('Delete'); };
+  $('btnBack').onclick = function () { if (st.sel !== null) move(null); };
+  document.querySelectorAll('[data-close]').forEach(function (b) { b.onclick = function () { showPanel(null); }; });
+  $('q').oninput = function () { st.q = this.value; renderPool(); };
+  $('sp').onchange = function () { st.sp = this.value; renderPool(); };
+
+  var spOpts = [['', 'Toutes les espèces']].concat(Object.keys(SPECIES_FR).map(function (k) { return [k, SPECIES_FR[k]]; }).sort(function (a, b) { return a[1].localeCompare(b[1], 'fr'); }));
+  spOpts.forEach(function (o) { var e = document.createElement('option'); e.value = o[0]; e.textContent = o[1]; $('sp').appendChild(e); });
+
+  $('formCreate').onsubmit = function (e) {
+    e.preventDefault();
+    var err = $('cErr'); err.textContent = '';
+    var name = $('cName').value.trim(), pw = $('cPw').value, pw2 = $('cPw2').value;
+    if (!name) { err.textContent = 'Donne un nom au profil.'; return; }
+    if (pw.length < 4) { err.textContent = 'Le mot de passe doit avoir au moins 4 caractères.'; return; }
+    if (pw !== pw2) { err.textContent = 'Les deux mots de passe sont différents.'; return; }
+    $('cSubmit').disabled = true;
+    rpc('create_profile', { p_name: name, p_password: pw }).then(function (id) {
+      st.cur = id; st.pw = pw; st.editing = true; st.sel = null; st.save = 'saved';
+      st.curDoc = { id: id, name: name, rank: {} }; st.rank = {};
+      st.profiles = st.profiles.concat([st.curDoc]);
+      lsSet('tl-profile', id);
+      showPanel(null); render();
+    }).catch(function (x) { err.textContent = errText(x); }).then(function () { $('cSubmit').disabled = false; });
+  };
+
+  $('formUnlock').onsubmit = function (e) {
+    e.preventDefault();
+    var err = $('uErr'); err.textContent = '';
+    var pw = $('uPw').value;
+    rpc('check_password', { p_id: st.cur, p_password: pw }).then(function (ok) {
+      if (ok !== true) { err.textContent = 'Mot de passe incorrect.'; return; }
+      st.pw = pw; st.editing = true; st.sel = null; st.save = ''; showPanel(null); render();
+    }).catch(function (x) { err.textContent = errText(x); });
+  };
+
+  $('formDelete').onsubmit = function (e) {
+    e.preventDefault();
+    var err = $('dErr'); err.textContent = '';
+    rpc('delete_profile', { p_id: st.cur, p_password: $('dPw').value }).then(function () {
+      dirty = false; clearTimeout(timer);
+      st.profiles = st.profiles.filter(function (p) { return p.id !== st.cur; });
+      st.cur = null; st.curDoc = null; st.rank = {}; st.editing = false; st.sel = null; st.pw = '';
+      lsSet('tl-profile', ''); showPanel(null); render();
+    }).catch(function (x) { err.textContent = errText(x); });
+  };
+
+  window.addEventListener('pagehide', function () { flush(); });
+
+  /* ---------- loading the shared profiles ---------- */
+  function refresh() {
+    return rpc('list_profiles').then(function (rows) {
+      st.profiles = rows || []; st.loaded = true; st.failed = false;
+      if (!st.cur) {
+        var last = lsGet('tl-profile');
+        if (last && find(last)) st.cur = last;
+      }
+      if (st.cur) {
+        var p = find(st.cur);
+        if (!p) { st.cur = null; st.curDoc = null; st.rank = {}; st.editing = false; st.sel = null; st.pw = ''; }
+        else { st.curDoc = p; if (!st.editing) st.rank = p.rank || {}; }
+      }
+      render();
+    }).catch(function () { st.loaded = true; st.failed = true; render(); });
+  }
+
+  render();
+  refresh();
+  setInterval(function () { if (!st.editing && !document.hidden && !dirty) refresh(); }, 15000);
+})();
+</script>
+</body>
+</html>
